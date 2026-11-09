@@ -1,0 +1,538 @@
+{
+  "datasets": [
+    {
+      "name": "7f7fdd01",
+      "displayName": "monthly_summary",
+      "queryLines": [
+        "SELECT month, income, net_spend, savings, round(savings_rate * 100, 1) AS savings_rate_pct\r\n",
+        "FROM workspace.finance_pipeline.gold_monthly_summary\r\n",
+        "ORDER BY month"
+      ],
+      "catalog": "workspace",
+      "schema": "finance_pipeline"
+    },
+    {
+      "name": "801ed3cf",
+      "displayName": "category_spend",
+      "queryLines": [
+        "SELECT month, category, spent\r\n",
+        "FROM workspace.finance_pipeline.gold_category_spend"
+      ]
+    },
+    {
+      "name": "5ffcf34e",
+      "displayName": "budget_this_month",
+      "queryLines": [
+        "SELECT category, monthly_budget, spent, remaining, round(pct_used * 100, 1) AS pct_used, status\r\n",
+        "FROM workspace.finance_pipeline.gold_budget_status\r\n",
+        "WHERE month = (SELECT max(month) FROM workspace.finance_pipeline.gold_budget_status)\r\n",
+        "ORDER BY pct_used DESC"
+      ],
+      "catalog": "workspace",
+      "schema": "finance_pipeline"
+    },
+    {
+      "name": "3550bcd8",
+      "displayName": "transaction",
+      "queryLines": [
+        "SELECT txn_date, month, merchant, category, amount, account\r\n",
+        "FROM workspace.finance_pipeline.transactions_categorized\r\n",
+        "WHERE direction = 'DEBIT' AND category <> 'Transfer'"
+      ],
+      "catalog": "workspace",
+      "schema": "finance_pipeline"
+    },
+    {
+      "name": "106381f5",
+      "displayName": "data_quality",
+      "queryLines": [
+        "SELECT\r\n",
+        "  (SELECT count(*) FROM workspace.finance_pipeline.silver_transactions)     AS clean_transactions,\r\n",
+        "  (SELECT count(*) FROM workspace.finance_pipeline.quarantine_transactions) AS quarantined_rows"
+      ]
+    }
+  ],
+  "pages": [
+    {
+      "name": "7accd76c",
+      "displayName": "Overview",
+      "layout": [
+        {
+          "widget": {
+            "name": "total-saved",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "7f7fdd01",
+                  "fields": [
+                    {
+                      "name": "sum(savings)",
+                      "expression": "SUM(`savings`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "showDescription": false,
+                "title": "Total Saved"
+              },
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "sum(savings)"
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            },
+            "specExtensions": {
+              "widgetBackgroundColor": {
+                "light": "#F3E5F5",
+                "dark": "#4A148C"
+              },
+              "widgetBorderColor": {
+                "light": "#9C27B0",
+                "dark": "#EA80FC"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 6,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "avg-savings-rate",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "7f7fdd01",
+                  "fields": [
+                    {
+                      "name": "avg(savings_rate_pct)",
+                      "expression": "AVG(`savings_rate_pct`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "showDescription": false,
+                "title": "Avg Savings Rate"
+              },
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "avg(savings_rate_pct)"
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            },
+            "specExtensions": {
+              "widgetBackgroundColor": {
+                "light": "#F3E5F5",
+                "dark": "#4A148C"
+              },
+              "widgetBorderColor": {
+                "light": "#9C27B0",
+                "dark": "#EA80FC"
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 0,
+            "width": 6,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "income-vs-spending",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "7f7fdd01",
+                  "fields": [
+                    {
+                      "name": "monthly(month)",
+                      "expression": "DATE_TRUNC(\"MONTH\", `month`)"
+                    },
+                    {
+                      "name": "sum(income)",
+                      "expression": "SUM(`income`)"
+                    },
+                    {
+                      "name": "sum(net_spend)",
+                      "expression": "SUM(`net_spend`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": "Income vs Spending"
+              },
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "monthly(month)",
+                  "scale": {
+                    "type": "temporal"
+                  }
+                },
+                "y": {
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "fields": [
+                    {
+                      "fieldName": "sum(income)"
+                    },
+                    {
+                      "fieldName": "sum(net_spend)"
+                    }
+                  ]
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            },
+            "specExtensions": {
+              "widgetBackgroundColor": {
+                "light": "#F3E5F5",
+                "dark": "#4A148C"
+              },
+              "widgetBorderColor": {
+                "light": "#9C27B0",
+                "dark": "#EA80FC"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 3,
+            "width": 6,
+            "height": 5
+          }
+        },
+        {
+          "widget": {
+            "name": "where-my-money-goes",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "801ed3cf",
+                  "fields": [
+                    {
+                      "name": "category",
+                      "expression": "`category`"
+                    },
+                    {
+                      "name": "monthly(month)",
+                      "expression": "DATE_TRUNC(\"MONTH\", `month`)"
+                    },
+                    {
+                      "name": "sum(spent)",
+                      "expression": "SUM(`spent`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": "Where My Money Goes"
+              },
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "monthly(month)",
+                  "scale": {
+                    "type": "temporal"
+                  }
+                },
+                "y": {
+                  "fieldName": "sum(spent)",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "color": {
+                  "fieldName": "category",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            },
+            "specExtensions": {
+              "widgetBackgroundColor": {
+                "light": "#F3E5F5",
+                "dark": "#4A148C"
+              },
+              "widgetBorderColor": {
+                "light": "#9C27B0",
+                "dark": "#EA80FC"
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 3,
+            "width": 6,
+            "height": 5
+          }
+        },
+        {
+          "widget": {
+            "name": "this-month-budgets",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "5ffcf34e",
+                  "fields": [
+                    {
+                      "name": "category",
+                      "expression": "`category`"
+                    },
+                    {
+                      "name": "spent",
+                      "expression": "`spent`"
+                    },
+                    {
+                      "name": "monthly_budget",
+                      "expression": "`monthly_budget`"
+                    },
+                    {
+                      "name": "remaining",
+                      "expression": "`remaining`"
+                    },
+                    {
+                      "name": "pct_used",
+                      "expression": "`pct_used`"
+                    },
+                    {
+                      "name": "status",
+                      "expression": "`status`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": "This Month's Budgets"
+              },
+              "version": 2,
+              "widgetType": "table",
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "category"
+                  },
+                  {
+                    "fieldName": "spent"
+                  },
+                  {
+                    "fieldName": "monthly_budget"
+                  },
+                  {
+                    "fieldName": "remaining"
+                  },
+                  {
+                    "fieldName": "pct_used"
+                  },
+                  {
+                    "fieldName": "status",
+                    "style": {
+                      "type": "basic",
+                      "rules": [
+                        {
+                          "condition": {
+                            "operand": {
+                              "type": "data-value",
+                              "value": "Over"
+                            },
+                            "operator": "="
+                          },
+                          "backgroundColor": {
+                            "themeColorType": "visualizationColors",
+                            "position": 2
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ]
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            },
+            "specExtensions": {
+              "widgetBackgroundColor": {
+                "light": "#F3E5F5",
+                "dark": "#4A148C"
+              },
+              "widgetBorderColor": {
+                "light": "#9C27B0",
+                "dark": "#EA80FC"
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 8,
+            "width": 6,
+            "height": 5
+          }
+        },
+        {
+          "widget": {
+            "name": "top-merchants",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "3550bcd8",
+                  "fields": [
+                    {
+                      "name": "merchant",
+                      "expression": "`merchant`"
+                    },
+                    {
+                      "name": "sum(amount)",
+                      "expression": "SUM(`amount`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": "Top Merchants"
+              },
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "merchant",
+                  "scale": {
+                    "type": "categorical",
+                    "categorySize": {
+                      "type": "number-of-categories",
+                      "number": 10
+                    }
+                  }
+                },
+                "y": {
+                  "fieldName": "sum(amount)",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            },
+            "specExtensions": {
+              "widgetBackgroundColor": {
+                "light": "#F3E5F5",
+                "dark": "#4A148C"
+              },
+              "widgetBorderColor": {
+                "light": "#9C27B0",
+                "dark": "#EA80FC"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 8,
+            "width": 6,
+            "height": 5
+          }
+        }
+      ],
+      "pageType": "PAGE_TYPE_CANVAS",
+      "layoutVersion": "GRID_V1"
+    },
+    {
+      "name": "5594b882",
+      "displayName": "Untitled page 1",
+      "pageType": "PAGE_TYPE_CANVAS"
+    },
+    {
+      "name": "7c6bc9b0",
+      "displayName": "Global Filters",
+      "layout": [
+        {
+          "widget": {
+            "name": "18fea0a8",
+            "spec": {
+              "encodings": {
+                "fields": []
+              },
+              "version": 2,
+              "widgetType": "filter-single-select",
+              "frame": {
+                "showTitle": true
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 2
+          }
+        }
+      ],
+      "pageType": "PAGE_TYPE_GLOBAL_FILTERS",
+      "layoutVersion": "GRID_V1"
+    }
+  ],
+  "uiSettings": {
+    "theme": {
+      "widgetHeaderAlignment": "ALIGNMENT_UNSPECIFIED"
+    },
+    "applyModeEnabled": false
+  }
+}
